@@ -1,0 +1,182 @@
+name: rotozoom
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build_client_linux_and_wasm:
+    name: Build clients Linux and Wasm
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install package dependencies
+      run: sudo apt-get update && sudo apt-get install -y pkg-config libx11-dev libxi-dev libgl1-mesa-dev libasound2-dev
+
+    - name: Test docker version
+      run: docker --version
+
+    - name: Build for target x86_64-unknown-linux-gnu
+      working-directory: .
+      run: cargo build --release
+
+    - name: Run clippy for target x86_64-unknown-linux-gnu
+      working-directory: .
+      run: cargo clippy >clippy.output 2>&1 ; cat clippy.output ;! egrep -q "warning|error:" clippy.output
+
+    - name: Run tests
+      working-directory: .
+      run: cargo test
+
+    - name: Add wasm32-unknown-unknown target
+      run: rustup target add wasm32-unknown-unknown
+
+    - name: Build for target wasm32-unknown-unknown
+      working-directory: .
+      run: cargo build --target wasm32-unknown-unknown --release
+
+    - name: Run clippy for target wasm32-unknown-unknown
+      working-directory: .
+      run: cargo clippy --target wasm32-unknown-unknown >clippy.output 2>&1 ; cat clippy.output ;! egrep -q "warning|error:" clippy.output
+
+    - name: Prepare produced files
+      run: |
+        mkdir -p rotozoom-linux-x86_64 rotozoom-wasm
+        cp target/release/rotozoom rotozoom-linux-x86_64
+        # cp -r sounds rotozoom-linux-x86_64
+        cp index.html rotozoom-wasm
+        cp target/wasm32-unknown-unknown/release/rotozoom.wasm rotozoom-wasm
+        # cp -r sounds rotozoom-wasm
+        tar zcvvf rotozoom-linux-x86_64.tar.gz rotozoom-linux-x86_64
+        tar zcvvf rotozoom-wasm.tar.gz rotozoom-wasm
+
+    - name: 'Upload rotozoom-linux-x86_64.tar.gz'
+      uses: actions/upload-artifact@v2
+      with:
+        name: rotozoom-linux-x86_64.tar.gz
+        path: rotozoom-linux-x86_64.tar.gz
+        retention-days: 1
+
+    - name: 'Upload rotozoom-wasm.tar.gz'
+      uses: actions/upload-artifact@v2
+      with:
+        name: rotozoom-wasm.tar.gz
+        path: rotozoom-wasm.tar.gz
+        retention-days: 1
+
+    - name: 'Login to Docker registry'
+      env:
+        registry_password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+      run: echo "$registry_password" | docker login -u uggla --password-stdin
+      if: github.ref == 'refs/heads/main'
+
+    - name: 'Build Docker image'
+      working-directory: .
+      run: docker build -t rotozoom .
+      if: github.ref == 'refs/heads/main'
+
+    - name: 'Tag Docker image'
+      working-directory: .
+      run: docker tag rotozoom:latest uggla/rotozoom:latest
+      if: github.ref == 'refs/heads/main'
+
+    - name: 'Push Docker image to registry'
+      run: docker push uggla/rotozoom
+      if: github.ref == 'refs/heads/main'
+
+    - name: 'Logout and clean credentials'
+      run: docker logout && rm -f /home/runner/.docker/config.json
+      if: github.ref == 'refs/heads/main'
+
+  build_client_macos:
+    name: Build clients MacOS
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Build for target x86_64-apple-darwin
+      working-directory: .
+      run: cargo build --release
+
+    - name: Run tests
+      working-directory: .
+      run: cargo test
+
+    - name: Prepare produced files
+      run: |
+        mkdir -p rotozoom-macos-x86_64
+        cp target/release/rotozoom rotozoom-macos-x86_64
+        # cp -r sounds rotozoom-macos-x86_64
+        tar zcvvf rotozoom-macos-x86_64.tar.gz rotozoom-macos-x86_64
+
+    - name: 'Upload rotozoom-macos-x86_64.tar.gz'
+      uses: actions/upload-artifact@v2
+      with:
+        name: rotozoom-macos-x86_64.tar.gz
+        path: rotozoom-macos-x86_64.tar.gz
+        retention-days: 1
+
+
+  build_client_windows:
+    name: Build client windows
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Build for target x86_64-pc-windows-msvc
+      working-directory: .
+      run: cargo build --release
+
+    - name: Run tests
+      working-directory: .
+      run: cargo test
+
+    - name: Prepare produced files
+      run: |
+        new-item -Name rotozoom-windows -ItemType directory
+        Copy-Item -Path "target\release\rotozoom.exe" -Destination "rotozoom-windows"
+        # Copy-Item -Path "sounds" -Destination "rotozoom-windows" -Recurse
+        Compress-Archive -Path rotozoom-windows -DestinationPath rotozoom-windows.zip
+
+    - name: 'Upload rotozoom-windows.zip'
+      uses: actions/upload-artifact@v2
+      with:
+        name: rotozoom-windows.zip
+        path: rotozoom-windows.zip
+        retention-days: 1
+
+
+  create_github_release:
+    name: Create Github release
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs: [build_client_linux_and_wasm, build_client_windows, build_client_macos, build_maven]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Download all workflow run artifacts
+      uses: actions/download-artifact@v2
+
+    - uses: "marvinpinto/action-automatic-releases@latest"
+      name: Create a Github release
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        automatic_release_tag: latest
+        title: rotozoom
+        files: |
+          rotozoom-server.tar.gz
+          rotozoom-worker.tar.gz
+          rotozoom-windows.zip
+          rotozoom-linux-x86_64.tar.gz
+          rotozoom-macos-x86_64.tar.gz
+          rotozoom-wasm.tar.gz
