@@ -71,11 +71,18 @@ jobs:
         path: rotozoom-wasm.tar.gz
         retention-days: 1
 
-    - name: 'Login to Docker registry'
-      env:
-        registry_password: ${{ secrets.DOCKER_HUB_PASSWORD }}
-      run: echo "$registry_password" | docker login -u uggla --password-stdin
-      if: github.ref == 'refs/heads/main'
+    # - name: 'Login to Docker registry'
+    #   env:
+    #     registry_password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+    #   run: echo "$registry_password" | docker login -u uggla --password-stdin
+    #   if: github.ref == 'refs/heads/main'
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v1
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: 'Build Docker image'
       working-directory: .
