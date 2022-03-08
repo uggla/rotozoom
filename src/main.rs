@@ -158,7 +158,7 @@ fn window_conf() -> Conf {
 async fn main() {
     let mut fps: i32 = 0;
     let mut fps_t = get_time();
-    let mut src_image: Image = load_image("src/ferris.png").await.unwrap();
+    let mut src_image: Image = load_image("images/ferris.png").await.unwrap();
     let mut dst_image =
         Image::gen_image_color(screen_width() as u16, screen_height() as u16, BLACK);
     let texture: Texture2D = Texture2D::from_image(&dst_image);

@@ -51,9 +51,15 @@ jobs:
         mkdir -p rotozoom-linux-x86_64 rotozoom-wasm
         cp target/release/rotozoom rotozoom-linux-x86_64
         # cp -r sounds rotozoom-linux-x86_64
+        mkdir -p rotozoom-linux-x86_64/images
+        cp images/ferris.png rotozoom-linux-x86_64/images
+
         cp index.html rotozoom-wasm
         cp target/wasm32-unknown-unknown/release/rotozoom.wasm rotozoom-wasm
         # cp -r sounds rotozoom-wasm
+        mkdir -p rotozoom-wasm/images
+        cp images/ferris.png rotozoom-wasm/images
+
         tar zcvvf rotozoom-linux-x86_64.tar.gz rotozoom-linux-x86_64
         tar zcvvf rotozoom-wasm.tar.gz rotozoom-wasm
 
@@ -120,6 +126,8 @@ jobs:
         mkdir -p rotozoom-macos-x86_64
         cp target/release/rotozoom rotozoom-macos-x86_64
         # cp -r sounds rotozoom-macos-x86_64
+        mkdir -p rotozoom-macos-x86_64/images
+        cp images/ferris.png rotozoom-macos-x86_64/images
         tar zcvvf rotozoom-macos-x86_64.tar.gz rotozoom-macos-x86_64
 
     - name: 'Upload rotozoom-macos-x86_64.tar.gz'
@@ -150,6 +158,8 @@ jobs:
         new-item -Name rotozoom-windows -ItemType directory
         Copy-Item -Path "target\release\rotozoom.exe" -Destination "rotozoom-windows"
         # Copy-Item -Path "sounds" -Destination "rotozoom-windows" -Recurse
+        new-item -Name rotozoom-windows\images -ItemType directory
+        Copy-Item -Path "images\ferris.png" -Destination "rotozoom-windows\images"
         Compress-Archive -Path rotozoom-windows -DestinationPath rotozoom-windows.zip
 
     - name: 'Upload rotozoom-windows.zip'
