@@ -76,13 +76,11 @@ jobs:
     #     registry_password: ${{ secrets.DOCKER_HUB_PASSWORD }}
     #   run: echo "$registry_password" | docker login -u uggla --password-stdin
     #   if: github.ref == 'refs/heads/main'
-
-    - name: Login to GitHub Container Registry
+    - name: Login to Docker Hub
       uses: docker/login-action@v1
       with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
 
     - name: 'Build Docker image'
       working-directory: .
