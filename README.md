@@ -1,8 +1,12 @@
 # rotozoom
 
+[![rotozoom](https://github.com/uggla/rotozoom/actions/workflows/rotozoom.yml/badge.svg)](https://github.com/uggla/rotozoom/actions/workflows/rotozoom.yml)
+
 A naive  rotozoom with macroquad
 * Compute a 2D Texture to create a rotozoom the old school way.
-* No usage of camera or texture rotation.
+* No usage of camera, texture rotation or shader.
+
+*Note: build with ``--release`` switch to achieve descent fps.*
 
 ## Authors
 

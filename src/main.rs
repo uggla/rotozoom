@@ -81,9 +81,15 @@ impl<'a> Effect<'a> {
                     self.src_image.height() as isize,
                 );
 
-                self.copy_pixel(x, y, dst_x, dst_y);
+                // Do not use get_pixel and set_pixel methods because
+                // they are using a Color struct that implies a lot of
+                // unnecessary conversion to and from f32.
+                // So performance is not good.
+                // Instead use a copy_pixel method that just copy
+                // pixel bytes.
                 // let color = self.src_image.get_pixel(x as u32, y as u32);
                 // self.dst_image.set_pixel(dst_x as u32, dst_y as u32, color);
+                self.copy_pixel(x, y, dst_x, dst_y);
 
                 src_x += dx;
                 src_y += dy;
