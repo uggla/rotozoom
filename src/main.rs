@@ -1,3 +1,6 @@
+// Rotozoom
+// This needs to be compiled with --release to have descent framerate
+
 #![allow(dead_code)]
 use std::f64::consts::PI;
 
@@ -23,7 +26,7 @@ impl<'a> Effect<'a> {
             for _ in 0..5 {
                 for h in 0..self.dst_image.height() {
                     self.dst_image
-                        .set_pixel(self.curtain_width as u32, h as u32, color);
+                        .set_pixel(self.curtain_width, h as u32, color);
                 }
                 self.curtain_width += 1;
             }
@@ -61,18 +64,17 @@ impl<'a> Effect<'a> {
         let dx: f64 = angle.cos() * zoom;
         let dy: f64 = angle.sin() * zoom;
 
-        let mut src_x: f64 = -dx * ((self.dst_image.width() / 2) as f64);
-        let mut src_y: f64 = -dy * ((self.dst_image.width() / 2) as f64);
-
-        let mut src_x_start: f64;
-        let mut src_y_start: f64;
-
-        src_x += dy * (self.dst_image.height() / 2) as f64;
-        src_y -= dx * (self.dst_image.height() / 2) as f64;
+        // Rotation formula
+        // x′=x⋅cos(θ)−y⋅sin(θ)
+        // y′=x⋅sin(θ)+y⋅cos(θ)
+        let mut src_x: f64 = -((self.dst_image.width() / 2) as f64) * dx
+            + ((self.dst_image.height() / 2) as f64) * dy;
+        let mut src_y: f64 = -((self.dst_image.width() / 2) as f64) * dy
+            - ((self.dst_image.height() / 2) as f64) * dx;
 
         for dst_y in 0..self.dst_image.height() {
-            src_x_start = src_x;
-            src_y_start = src_y;
+            let src_x_start = src_x;
+            let src_y_start = src_y;
             for dst_x in 0..self.dst_image.width() {
                 let (x, y) = wrap(
                     src_x as isize,
@@ -100,8 +102,8 @@ impl<'a> Effect<'a> {
     }
 
     fn copy_pixel(&mut self, src_x: usize, src_y: usize, dst_x: usize, dst_y: usize) {
-        let src_offset = src_y * self.src_image.width() as usize * 4 + src_x * 4;
-        let dst_offset = dst_y * self.dst_image.width() as usize * 4 + dst_x * 4;
+        let src_offset = src_y * self.src_image.width() * 4 + src_x * 4;
+        let dst_offset = dst_y * self.dst_image.width() * 4 + dst_x * 4;
         self.dst_image.bytes[dst_offset..(dst_offset + 4)]
             .copy_from_slice(&self.src_image.bytes[src_offset..(src_offset + 4)]);
     }
@@ -133,7 +135,7 @@ fn display_fps(fps: &mut i32, frame_t: f64, fps_refresh: &mut f64) {
     }
     let text = format!("{} fps", fps);
     let font_size = 30.;
-    draw_text(&text, 5., 20., font_size, DARKGRAY)
+    draw_text(&text, 5., 20., font_size, DARKGRAY);
 }
 
 fn display_end_msg() {
@@ -146,7 +148,7 @@ fn display_end_msg() {
         screen_height() / 2. - text_size.height / 2.,
         font_size,
         SKYBLUE,
-    )
+    );
 }
 
 fn window_conf() -> Conf {
@@ -184,7 +186,7 @@ async fn main() {
         }
         clear_background(WHITE);
         draw_texture(
-            texture,
+            &texture,
             screen_width() / 2. - texture.width() / 2.,
             screen_height() / 2. - texture.height() / 2.,
             WHITE,
@@ -193,7 +195,7 @@ async fn main() {
         if (frame_t - close_event_t) > 30.0 && angle == 0.0 {
             angle = 20.0; // set a high value to be reset to 0.0 in next loop
             effect.left_curtain(WHITE);
-            //effect.make_transparent();
+            // effect.make_transparent();
             if (frame_t - close_event_t) > 35.0 {
                 display_end_msg();
             }
